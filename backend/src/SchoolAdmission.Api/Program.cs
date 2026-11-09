@@ -119,12 +119,17 @@ app.MapPost("/classes", async (CreateClassRequest body, AdmissionService svc, Ca
    
 });
 
-app.MapGet("/classes", async (AdmissionService svc, CancellationToken ct) =>);
+app.MapGet("/classes", async (AdmissionService svc, CancellationToken ct) =>
+    Results.Ok(await svc.ListClassesAsync(ct)));
 
 app.MapGet("/classes/{classId:guid}", async (Guid classId, AdmissionService svc, CancellationToken ct) =>
 {
- 
+    var dto = await svc.GetClassAsync(classId, ct);
+    return dto is null ? FromFailure(Failure.NotFound) : Results.Ok(dto);
 });
+
+
+
 
 // ---------- holds ----------
 
