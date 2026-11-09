@@ -29,9 +29,75 @@ var app = builder.Build();
 
 
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    const int attempts = 30;
+    for (var i = 1; i <= attempts; i++)
+    {
+        try
+        {
+            await db.Database.EnsureCreatedAsync();
+            break;
+        }
+        catch (Exception ex) when (i < attempts)
+        {
+            app.Logger.LogWarning("Database not ready (attempt {Attempt}/{Max}): {Message}", i, attempts, ex.Message);
+            await Task.Delay(1000);
+        }
+    }
+}
+
+
+
+
+
 app.UseCors();
 
 // ---------- helpers ----------
+
+
+static IResult Error(int status, string code, string message) =>
+    Results.Json(new ApiError(code, message), statusCode: status);
+
+static IResult FromFailure(Failure f) => f switch
+{
+    Failure.NotFound => Error(404, "NOT_FOUND", "Resource not found."),
+    Failure.Forbidden => Error(403, "FORBIDDEN", "This application belongs to a different student."),
+    Failure.NoSeats => Error(409, "NO_SEATS_AVAILABLE", "No seats are available in this class."),
+    Failure.AlreadyApplied => Error(409, "ALREADY_APPLIED", "You already have an active application for this class."),
+    Failure.Expired => Error(409, "HOLD_EXPIRED", "This application has expired."),
+    Failure.DuplicateName => Error(409, "DUPLICATE_CLASS", "A class with this name already exists."),
+    _ => Error(409, "INVALID_STATE", "This application cannot be changed in its current state.")
+};
+
+// Returns null when the header is valid; otherwise the error response to send.
+static IResult? RequireStudent(HttpRequest req, out string studentId)
+{
+    studentId = req.Headers["X-Student-Id"].ToString().Trim();
+    if (studentId.Length == 0)
+        return Error(400, "MISSING_STUDENT_ID", "The X-Student-Id header is required.");
+    return StudentIdRules.IsValid(studentId)
+        ? null
+        : Error(400, "INVALID_STUDENT_ID", "X-Student-Id must be a 17-digit birth registration number.");
+}
+
+// For endpoints where the header is optional: when present it must be valid and match the owner.
+static IResult? OptionalStudent(HttpRequest req, out string? studentId)
+{
+    var raw = req.Headers["X-Student-Id"].ToString().Trim();
+    if (raw.Length == 0) { studentId = null; return null; }
+    studentId = raw;
+    return StudentIdRules.IsValid(raw)
+        ? null
+        : Error(400, "INVALID_STUDENT_ID", "X-Student-Id must be a 17-digit birth registration number.");
+}
+
+
+
+
+
+
 
 
 // ---------- classes ----------
@@ -39,7 +105,17 @@ app.UseCors();
 app.MapPost("/classes", async (CreateClassRequest body, AdmissionService svc, CancellationToken ct) =>
 {
 
-    return
+    var name = body.Name?.Trim();
+    if (string.IsNullOrEmpty(name) || name.Length > 200)
+        return Error(400, "INVALID_NAME", "name is required (max 200 characters).");
+    if (body.TotalSeats is null or <= 0 or > 1_000_000)
+        return Error(400, "INVALID_SEATS", "totalSeats must be a positive integer.");
+
+    var result = await svc.CreateClassAsync(name, body.TotalSeats.Value, ct);
+    return result.Ok
+        ? Results.Created($"/classes/{result.Value!.Id}", result.Value)
+        : FromFailure(result.Failure);
+    
    
 });
 
