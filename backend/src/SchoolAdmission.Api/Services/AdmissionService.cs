@@ -117,15 +117,84 @@ public class AdmissionService
     /// (SELECT ... FOR UPDATE) inside a transaction: every claim for one class is serialized,
     /// so the occupancy count we read cannot change before we insert.
     /// </summary>
-    public async Task<Result<HoldDto>> CreateHoldAsync(Guid classId, string studentId, CancellationToken ct)
+
+
+
+  public async Task<Result<HoldDto>> CreateHoldAsync(Guid classId, string studentId, CancellationToken ct)
     {
-       
+        var cls = await _db.Classes.AsNoTracking().FirstOrDefaultAsync(c => c.Id == classId, ct);
+        if (cls is null) return Result<HoldDto>.Fail(Failure.NotFound);
+
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+        await _db.Database.ExecuteSqlAsync(
+            $"SELECT 1 FROM classes WHERE \"Id\" = {classId} FOR UPDATE", ct);
+
+        var now = DateTime.UtcNow;
+
+        // Release seats whose deadline passed so they are reusable right now.
+        await _db.Holds
+            .Where(h => h.ClassId == classId && h.Status == HoldStatus.Held && h.ExpiresAt <= now)
+            .ExecuteUpdateAsync(s => s.SetProperty(h => h.Status, HoldStatus.Expired), ct);
+
+        var alreadyApplied = await _db.Holds.AnyAsync(h =>
+            h.ClassId == classId && h.StudentId == studentId &&
+            (h.Status == HoldStatus.Held || h.Status == HoldStatus.Confirmed), ct);
+        if (alreadyApplied)
+        {
+            await tx.RollbackAsync(ct);
+            return Result<HoldDto>.Fail(Failure.AlreadyApplied);
+        }
+
+        var occupied = await _db.Holds.CountAsync(h =>
+            h.ClassId == classId &&
+            (h.Status == HoldStatus.Held || h.Status == HoldStatus.Confirmed), ct);
+        if (occupied >= cls.TotalSeats)
+        {
+            await tx.RollbackAsync(ct);
+            return Result<HoldDto>.Fail(Failure.NoSeats);
+        }
+
+        var hold = new Hold
+        {
+            Id = Guid.NewGuid(),
+            ClassId = classId,
+            StudentId = studentId,
+            Status = HoldStatus.Held,
+            CreatedAt = now,
+            ExpiresAt = now.AddSeconds(_options.HoldDurationSeconds)
+        };
+        _db.Holds.Add(hold);
+
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            return Result<HoldDto>.Fail(Failure.AlreadyApplied);
+        }
+
+        return Result<HoldDto>.Success(HoldDto.From(hold, cls.Name, now));
     }
+
+
 
     public async Task<Result<HoldDto>> GetHoldAsync(Guid holdId, string? studentId, CancellationToken ct)
     {
-        
+        var hold = await _db.Holds.AsNoTracking().Include(h => h.Class)
+            .FirstOrDefaultAsync(h => h.Id == holdId, ct);
+        if (hold is null) return Result<HoldDto>.Fail(Failure.NotFound);
+        if (studentId is not null && hold.StudentId != studentId) return Result<HoldDto>.Fail(Failure.Forbidden);
+
+        return Result<HoldDto>.Success(HoldDto.From(hold, hold.Class.Name, DateTime.UtcNow));
     }
+
+
+
+
+
 
     /// <summary>
     /// Simulated payment. The HELD -> CONFIRMED transition is one conditional UPDATE, so it is
