@@ -135,12 +135,22 @@ app.MapGet("/classes/{classId:guid}", async (Guid classId, AdmissionService svc,
 
 app.MapPost("/classes/{classId:guid}/holds", async (Guid classId, HttpRequest req, AdmissionService svc, CancellationToken ct) =>
 {
+    var bad = RequireStudent(req, out var studentId);
+    if (bad is not null) return bad;
 
+    var result = await svc.CreateHoldAsync(classId, studentId, ct);
+    return result.Ok
+        ? Results.Created($"/holds/{result.Value!.Id}", result.Value)
+        : FromFailure(result.Failure);
 });
 
 app.MapGet("/holds/{holdId:guid}", async (Guid holdId, HttpRequest req, AdmissionService svc, CancellationToken ct) =>
 {
+    var bad = OptionalStudent(req, out var studentId);
+    if (bad is not null) return bad;
 
+    var result = await svc.GetHoldAsync(holdId, studentId, ct);
+    return result.Ok ? Results.Ok(result.Value) : FromFailure(result.Failure);
 });
 
 app.MapPost("/holds/{holdId:guid}/confirm", async (Guid holdId, HttpRequest req, AdmissionService svc, CancellationToken ct) =>
