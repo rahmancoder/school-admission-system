@@ -66,22 +66,49 @@ public class AdmissionService
 
 
 
-    public async Task<List<ClassDto>> ListClassesAsync(CancellationToken ct)
+ public async Task<List<ClassDto>> ListClassesAsync(CancellationToken ct)
     {
-        
-    }
+        var now = DateTime.UtcNow;
+        var rows = await _db.Classes.AsNoTracking()
+            .OrderBy(c => c.Name)
+            .Select(c => new
+            {
+                c.Id,
+                c.Name,
+                c.TotalSeats,
+                Held = c.Holds.Count(h => h.Status == HoldStatus.Held && h.ExpiresAt > now),
+                Confirmed = c.Holds.Count(h => h.Status == HoldStatus.Confirmed)
+            })
+            .ToListAsync(ct);
 
+        return rows.Select(r => ToDto(r.Id, r.Name, r.TotalSeats, r.Held, r.Confirmed)).ToList();
+    }
 
 
     public async Task<ClassDto?> GetClassAsync(Guid id, CancellationToken ct)
     {
-       
+        var now = DateTime.UtcNow;
+        var r = await _db.Classes.AsNoTracking()
+            .Where(c => c.Id == id)
+            .Select(c => new
+            {
+                c.Id,
+                c.Name,
+                c.TotalSeats,
+                Held = c.Holds.Count(h => h.Status == HoldStatus.Held && h.ExpiresAt > now),
+                Confirmed = c.Holds.Count(h => h.Status == HoldStatus.Confirmed)
+            })
+            .FirstOrDefaultAsync(ct);
+
+        return r is null ? null : ToDto(r.Id, r.Name, r.TotalSeats, r.Held, r.Confirmed);
     }
 
 
+    private static ClassDto ToDto(Guid id, string name, int total, int held, int confirmed) =>
+        new(id, name, total, held, confirmed, Math.Max(0, total - held - confirmed));
 
 
-    private static ClassDto ToDto(Guid id, string name, int total, int held, int confirmed) =>);
+
 
     // ---------- Holds ----------
 
