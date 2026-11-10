@@ -261,14 +261,30 @@ public class AdmissionService
 
     public async Task<List<HoldDto>> ListForStudentAsync(string studentId, CancellationToken ct)
     {
+        var now = DateTime.UtcNow;
+        var holds = await _db.Holds.AsNoTracking().Include(h => h.Class)
+            .Where(h => h.StudentId == studentId)
+            .OrderByDescending(h => h.CreatedAt)
+            .ToListAsync(ct);
+        return holds.Select(h => HoldDto.From(h, h.Class.Name, now)).ToList();
         
     }
 
+
+
+
     /// <summary>Marks overdue holds as EXPIRED. Called by the background sweeper.</summary>
+    
+    
     public Task<int> ExpireOverdueAsync(CancellationToken ct)
     {
-        
+        var now = DateTime.UtcNow;
+        return _db.Holds
+            .Where(h => h.Status == HoldStatus.Held && h.ExpiresAt <= now)
+            .ExecuteUpdateAsync(s => s.SetProperty(h => h.Status, HoldStatus.Expired), ct);
     }
+
+
 
     // ---------- helpers ----------
 
@@ -278,7 +294,7 @@ public class AdmissionService
         var owner = await _db.Holds.AsNoTracking()
             .Where(h => h.Id == holdId).Select(h => h.StudentId).FirstOrDefaultAsync(ct);
         
-        
+
         if (owner is null) return Result<bool>.Fail(Failure.NotFound);
         
         if (studentId is not null && owner != studentId) return Result<bool>.Fail(Failure.Forbidden);
