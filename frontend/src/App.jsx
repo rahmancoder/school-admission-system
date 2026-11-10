@@ -110,6 +110,23 @@ export default function App() {
 
             <main>
 
+
+
+
+
+
+
+
+                {tab === "admin" && (
+                    <CreateClass
+                        onCreated={(c) => {
+                            setNotice({ kind: "ok", text: `Created ${c.name} with ${c.totalSeats} seats.` });
+                            refreshClasses();
+                            setTab("classes");
+                        }}
+                        onError={(text) => setNotice({ kind: "error", text })}
+                    />
+                )}
             </main>
         </div>
     );
