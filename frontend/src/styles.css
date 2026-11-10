@@ -1,0 +1,374 @@
+:root {
+    --paper: #f4f6f8;
+    --card: #ffffff;
+    --ink: #17233b;
+    --muted: #5d6b82;
+    --line: #d9dfe8;
+    --blue: #2350c9;
+    --held: #c27a0e;
+    --confirmed: #1d7a4b;
+    --danger: #b3321f;
+    --radius: 6px;
+    font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--paper);
+    line-height: 1.5;
+}
+
+h1,
+h2 {
+    margin: 0;
+    line-height: 1.2;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+:focus-visible {
+    outline: 3px solid #8fb0ff;
+    outline-offset: 2px;
+}
+
+.shell {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+}
+
+.top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding-bottom: 18px;
+    border-bottom: 2px solid var(--ink);
+}
+
+.top h1 {
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+}
+
+.student {
+    display: grid;
+    gap: 4px;
+    min-width: min(100%, 300px);
+    font-size: .85rem;
+    color: var(--muted);
+}
+
+.student input {
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-size: 1.05rem;
+    letter-spacing: .08em;
+    color: var(--ink);
+    background: var(--card);
+}
+
+.student input[aria-invalid="true"] {
+    border-color: var(--danger);
+}
+
+.good {
+    color: var(--confirmed);
+}
+
+.bad {
+    color: var(--danger);
+}
+
+.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 18px 0;
+}
+
+.tabs button {
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    background: transparent;
+    border-radius: var(--radius);
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.tabs button[aria-selected="true"] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #fff;
+}
+
+button {
+    padding: 9px 16px;
+    border: 1px solid var(--blue);
+    background: var(--blue);
+    color: #fff;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+button.secondary {
+    background: transparent;
+    color: var(--blue);
+}
+
+button.danger {
+    background: transparent;
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.notice {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    border-radius: var(--radius);
+    border: 1px solid;
+}
+
+.notice.ok {
+    background: #e7f4ec;
+    border-color: #9bcdb0;
+    color: #14502f;
+}
+
+.notice.error {
+    background: #fbeae7;
+    border-color: #e3a79d;
+    color: #7d2113;
+}
+
+.notice button {
+    background: none;
+    border: 0;
+    color: inherit;
+    padding: 0 4px;
+    font-size: 1.2rem;
+}
+
+.empty,
+.hint {
+    color: var(--muted);
+}
+
+.hint {
+    font-size: .9rem;
+    margin: 6px 0 0;
+}
+
+.classes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+}
+
+.class {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+}
+
+.class-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.class h2 {
+    font-size: 1.15rem;
+}
+
+.seatbar {
+    display: flex;
+    height: 14px;
+    background: #e6ebf2;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.seatbar .confirmed {
+    background: var(--confirmed);
+    transition: width .4s;
+}
+
+.seatbar .held {
+    background: var(--held);
+    transition: width .4s;
+}
+
+.counts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 12px 0 0;
+}
+
+.counts dt {
+    font-size: .8rem;
+    color: var(--muted);
+}
+
+.counts dd {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.c-confirmed {
+    color: var(--confirmed);
+}
+
+.c-held {
+    color: var(--held);
+}
+
+.panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+}
+
+.form {
+    display: grid;
+    gap: 14px;
+    max-width: 460px;
+}
+
+.form label {
+    display: grid;
+    gap: 4px;
+    font-weight: 600;
+    font-size: .9rem;
+}
+
+.form input {
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-weight: 400;
+}
+
+.app {
+    max-width: 520px;
+}
+
+.app-class {
+    margin: 0 0 4px;
+    color: var(--muted);
+}
+
+.app h2 {
+    font-size: 1.5rem;
+}
+
+.app-held {
+    border-left: 6px solid var(--held);
+}
+
+.app-confirmed {
+    border-left: 6px solid var(--confirmed);
+}
+
+.app-expired,
+.app-cancelled {
+    border-left: 6px solid var(--muted);
+}
+
+.timer {
+    font-size: 3.4rem;
+    font-weight: 700;
+    margin: 12px 0 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--held);
+}
+
+.buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.history {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border: 1px solid var(--line);
+}
+
+.history th,
+.history td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+}
+
+.history th {
+    font-size: .85rem;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.badge {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: .8rem;
+    font-weight: 700;
+    background: #e6ebf2;
+}
+
+.badge.held {
+    background: #fbefd8;
+    color: #7c4b05;
+}
+
+.badge.confirmed {
+    background: #dcf1e5;
+    color: #14502f;
+}
+
+@media (max-width: 560px) {
+    .counts {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .history {
+        display: block;
+        overflow-x: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .seatbar span {
+        transition: none;
+    }
+}
