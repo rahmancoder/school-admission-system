@@ -201,15 +201,63 @@ public class AdmissionService
     /// atomic against the expiry sweeper, cancellation, and duplicate confirm calls.
     /// Confirmed seats were already counted as held, so totals never change here.
     /// </summary>
-    public async Task<Result<HoldDto>> ConfirmAsync(Guid holdId, string? studentId, CancellationToken ct)
+ 
+
+
+
+ public async Task<Result<HoldDto>> ConfirmAsync(Guid holdId, string? studentId, CancellationToken ct)
     {
-       
+        var check = await LoadOwned(holdId, studentId, ct);
+        if (!check.Ok) return Result<HoldDto>.Fail(check.Failure);
+
+        var now = DateTime.UtcNow;
+        var rows = await _db.Holds
+            .Where(h => h.Id == holdId && h.Status == HoldStatus.Held && h.ExpiresAt > now)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(h => h.Status, HoldStatus.Confirmed)
+                .SetProperty(h => h.ConfirmedAt, (DateTime?)now), ct);
+
+        var current = await ReloadAsync(holdId, ct);
+        if (rows == 1 || current.Status == HoldStatus.Confirmed)   // second case: idempotent retry
+            return Result<HoldDto>.Success(HoldDto.From(current, current.Class.Name, now));
+
+        if (current.Status == HoldStatus.Expired || (current.Status == HoldStatus.Held && current.ExpiresAt <= now))
+            return Result<HoldDto>.Fail(Failure.Expired);
+
+        return Result<HoldDto>.Fail(Failure.InvalidState);
     }
+
+
+
+
 
     public async Task<Result<HoldDto>> CancelAsync(Guid holdId, string? studentId, CancellationToken ct)
     {
-       
+        var check = await LoadOwned(holdId, studentId, ct);
+        if (!check.Ok) return Result<HoldDto>.Fail(check.Failure);
+
+        var now = DateTime.UtcNow;
+        var rows = await _db.Holds
+            .Where(h => h.Id == holdId && h.Status == HoldStatus.Held && h.ExpiresAt > now)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(h => h.Status, HoldStatus.Cancelled)
+                .SetProperty(h => h.CancelledAt, (DateTime?)now), ct);
+
+        var current = await ReloadAsync(holdId, ct);
+        if (rows == 1 || current.Status == HoldStatus.Cancelled)   // second case: idempotent retry
+            return Result<HoldDto>.Success(HoldDto.From(current, current.Class.Name, now));
+
+        if (current.Status == HoldStatus.Expired || (current.Status == HoldStatus.Held && current.ExpiresAt <= now))
+            return Result<HoldDto>.Fail(Failure.Expired);
+
+        return Result<HoldDto>.Fail(Failure.InvalidState); // CONFIRMED applications cannot be cancelled
     }
+
+
+
+
+
+
 
     public async Task<List<HoldDto>> ListForStudentAsync(string studentId, CancellationToken ct)
     {
@@ -224,11 +272,20 @@ public class AdmissionService
 
     // ---------- helpers ----------
 
+
     private async Task<Result<bool>> LoadOwned(Guid holdId, string? studentId, CancellationToken ct)
     {
+        var owner = await _db.Holds.AsNoTracking()
+            .Where(h => h.Id == holdId).Select(h => h.StudentId).FirstOrDefaultAsync(ct);
         
-    }
+        
+        if (owner is null) return Result<bool>.Fail(Failure.NotFound);
+        
+        if (studentId is not null && owner != studentId) return Result<bool>.Fail(Failure.Forbidden);
+        
+        return Result<bool>.Success(true);
 
+    }
 
 
     private Task<Hold> ReloadAsync(Guid holdId, CancellationToken ct) =>
