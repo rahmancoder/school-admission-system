@@ -5,6 +5,8 @@ import ClassList from "./components/ClassList.jsx";
 
 import CreateClass from "./components/CreateClass.jsx";
 
+import ApplicationView from "./components/ApplicationView.jsx";
+
 const STUDENT_KEY = "studentId";
 const isValidId = (v) => /^\d{17}$/.test(v);
 
@@ -120,6 +122,15 @@ export default function App() {
                     <ClassList classes={classes} myHolds={myHolds} canApply={valid} onApply={apply} onOpen={openApplication} />
                 )}
 
+
+                {tab === "application" && activeHoldId && (
+                    <ApplicationView
+                        holdId={activeHoldId}
+                        studentId={studentId}
+                        onChanged={refreshAll}
+                        onNotice={setNotice}
+                    />
+                )}
 
                 {tab === "admin" && (
                     <CreateClass
