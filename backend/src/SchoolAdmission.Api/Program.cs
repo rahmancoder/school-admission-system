@@ -179,7 +179,10 @@ app.MapDelete("/holds/{holdId:guid}", async (Guid holdId, HttpRequest req, Admis
 
 app.MapGet("/me/holds", async (HttpRequest req, AdmissionService svc, CancellationToken ct) =>
 {
+    var bad = RequireStudent(req, out var studentId);
+    if (bad is not null) return bad;
 
+    return Results.Ok(await svc.ListForStudentAsync(studentId, ct));
 });
 
 app.Run();
