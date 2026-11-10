@@ -7,6 +7,8 @@ import CreateClass from "./components/CreateClass.jsx";
 
 import ApplicationView from "./components/ApplicationView.jsx";
 
+import MyApplications from "./components/MyApplications.jsx";
+
 const STUDENT_KEY = "studentId";
 const isValidId = (v) => /^\d{17}$/.test(v);
 
@@ -132,6 +134,15 @@ export default function App() {
                     />
                 )}
 
+                {tab === "mine" &&
+                    (valid ? (
+                        <MyApplications holds={myHolds} onOpen={openApplication} />
+                    ) : (
+                        <p className="empty">Enter your 17-digit birth registration number above to see your applications.</p>
+                    ))}
+
+
+
                 {tab === "admin" && (
                     <CreateClass
                         onCreated={(c) => {
@@ -142,7 +153,11 @@ export default function App() {
                         onError={(text) => setNotice({ kind: "error", text })}
                     />
                 )}
+
+
             </main>
+
+
         </div>
     );
 }
