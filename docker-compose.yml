@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: school_admission
+    volumes:
+      - pgdata:/var/lib/postgresql/data   # named volume: data survives `docker compose down`
+    ports:
+      - "5433:5432"                        # host port 5433 avoids clashing with a local PostgreSQL
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d school_admission"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=school_admission;Username=postgres;Password=postgres;Maximum Pool Size=50"
+      HOLD_DURATION_SECONDS: ${HOLD_DURATION_SECONDS:-600}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8080
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Run with: docker compose --profile test run --rm tests
+  tests:
+    profiles: ["test"]
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    working_dir: /src
+    volumes:
+      - ./backend:/src
+    environment:
+      TEST_CONNECTION_STRING: "Host=db;Port=5432;Database=school_admission_test;Username=postgres;Password=postgres;Maximum Pool Size=50"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["dotnet", "test", "tests/SchoolAdmission.Tests"]
+
+volumes:
+  pgdata:
