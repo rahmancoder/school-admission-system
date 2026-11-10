@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api.js";
 import { usePolling } from "./hooks.js";
+import ClassList from "./components/ClassList.jsx";
+
 import CreateClass from "./components/CreateClass.jsx";
 
 const STUDENT_KEY = "studentId";
@@ -114,7 +116,9 @@ export default function App() {
 
 
 
-
+                {tab === "classes" && (
+                    <ClassList classes={classes} myHolds={myHolds} canApply={valid} onApply={apply} onOpen={openApplication} />
+                )}
 
 
                 {tab === "admin" && (
