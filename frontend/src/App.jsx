@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api.js";
 import { usePolling } from "./hooks.js";
-
+import CreateClass from "./components/CreateClass.jsx";
 
 const STUDENT_KEY = "studentId";
 const isValidId = (v) => /^\d{17}$/.test(v);
